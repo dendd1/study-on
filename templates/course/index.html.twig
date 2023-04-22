@@ -8,19 +8,23 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Id</th>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Description</th>
-                <th>actions</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Дополнительно</th>
+
             </tr>
         </thead>
         <tbody>
         {% for course in courses %}
+
             <tr>
-                <td>{{ course.id }}</td>
-                <td>{{ course.code }}</td>
-                <td>{{ course.name }}</td>
+{#                <td>{{ course.id }}</td>#}
+{#                <td>{{ course.code }}</td>#}
+                <td>
+                    <a
+                            href="{{ path('app_course_show', {'id': course.id}) }}"
+                    >{{ course.name }}</a>
+                </td>
                 <td>{{ course.description }}</td>
                 <td>
                     <a href="{{ path('app_course_show', {'id': course.id}) }}">show</a>
