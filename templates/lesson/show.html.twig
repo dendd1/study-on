@@ -3,26 +3,24 @@
 {% block title %}Lesson{% endblock %}
 
 {% block body %}
-    <h1>Lesson</h1>
+    <h1>{{ lesson.name }}</h1>
 
     <table class="table">
         <tbody>
+
             <tr>
-                <th>Id</th>
-                <td>{{ lesson.id }}</td>
-            </tr>
-            <tr>
-                <th>Name</th>
-                <td>{{ lesson.name }}</td>
+                <th>Course</th>
+                <td>
+                    <a
+                            href="{{ path('app_course_show', {'id': lesson.course.id}) }}"
+                    >{{ lesson.course.name }}</a>
+                </td>
             </tr>
             <tr>
                 <th>Content</th>
                 <td>{{ lesson.content }}</td>
             </tr>
-            <tr>
-                <th>Number</th>
-                <td>{{ lesson.number }}</td>
-            </tr>
+
         </tbody>
     </table>
 

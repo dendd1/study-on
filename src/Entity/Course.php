@@ -6,9 +6,12 @@ use App\Repository\CourseRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+
 
 /**
  * @ORM\Entity(repositoryClass=CourseRepository::class)
+ * @UniqueEntity(fields={"code"}, message="Курс с таким символьным кодом уже существует.")
  */
 class Course
 {
@@ -35,7 +38,7 @@ class Course
     private $description;
 
     /**
-     * @ORM\OneToMany(targetEntity=Lesson::class, mappedBy="course")
+     * @ORM\OneToMany(targetEntity=Lesson::class, mappedBy="course",  cascade={"persist"}, orphanRemoval=true)
      */
     private $lessons;
 
