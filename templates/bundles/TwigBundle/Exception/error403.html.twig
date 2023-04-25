@@ -1,0 +1,12 @@
+{# templates/bundles/TwigBundle/Exception/error403.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %} Отказ в доступе{% endblock %}
+
+{% block body %}
+    <h1>Простите, но вам отказано в доступе!</h1>
+
+    <p>
+        Просим вас <a href="{{ path('app_course_index') }}">вернуться на главную страницу</a>.
+    </p>
+{% endblock %}

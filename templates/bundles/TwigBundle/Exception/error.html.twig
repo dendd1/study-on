@@ -1,0 +1,12 @@
+{# templates/bundles/TwigBundle/Exception/error5хх.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %} Кажется упали...{% endblock %}
+
+{% block body %}
+    <h1>Упал?... Нет, просто сломалось что-то.</h1>
+    <h1 class="fw-bold">{{ status_code }}</h1>
+    <p>
+        Просим вас <a href="{{ path('app_course_index') }}">вернуться на главную страницу</a>.
+    </p>
+{% endblock %}
