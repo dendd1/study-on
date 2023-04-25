@@ -157,7 +157,7 @@ class AppFixtures extends Fixture
 
         $cleanCourse = new Course();
         $cleanCourse
-            ->setCode('$cleanCourse-1')
+            ->setCode('cleanCourse-1')
             ->setName('Уборка дома для начинающих')
             ->setDescription('Лето заканчивается, а это значит, что настало время провести г
             енеральную уборку с мытьем окон и стен, стиркой штор, чисткой мебели и радиаторов.');

@@ -1,32 +1,30 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Lesson{% endblock %}
+{% block title %}{{ lesson.name }}/{{ lesson.course.name }}/StudyOn{% endblock %}
 
 {% block body %}
-    <h1>{{ lesson.name }}</h1>
+    <div class="row mx-5 mt-3 justify-content-center">
+        <h1>{{ lesson.name }}</h1>
+        <p class="fs-5">
+            Урок из курса:
+            <span>
+             <a class="text-decoration-none"
+                href="{{ path('app_course_show', {'id': lesson.course.id}) }}"> {{ lesson.course.name }} </a>
+        </span>
+        </p>
+        <div class="border border-primary border-1 rounded-3 p-4">
+            <p class="fs-5">{{ lesson.content }}</p>
+        </div>
 
-    <table class="table">
-        <tbody>
+        <div class="d-flex justify-content-center">
+            <a class="btn btn-outline-primary mt-3 fs-5 me-4" style="width: 200px" href="{{ path('app_course_show', {'id': lesson.course.id}) }}">назад к курсу</a>
 
-            <tr>
-                <th>Course</th>
-                <td>
-                    <a
-                            href="{{ path('app_course_show', {'id': lesson.course.id}) }}"
-                    >{{ lesson.course.name }}</a>
-                </td>
-            </tr>
-            <tr>
-                <th>Content</th>
-                <td>{{ lesson.content }}</td>
-            </tr>
+            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px"
+               href="{{ path('app_lesson_edit', {'id': lesson.id}) }}">редактировать</a>
 
-        </tbody>
-    </table>
+        </div>
 
-    <a href="{{ path('app_lesson_index') }}">back to list</a>
+        {{ include('lesson/_delete_form.html.twig') }}
+    </div>
 
-    <a href="{{ path('app_lesson_edit', {'id': lesson.id}) }}">edit</a>
-
-    {{ include('lesson/_delete_form.html.twig') }}
 {% endblock %}

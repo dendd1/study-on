@@ -1,11 +1,16 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Lesson{% endblock %}
+{% block title %}Создание урока/{{ lesson.course.name }}/StudyOn{% endblock %}
 
 {% block body %}
-    <h1>Create new Lesson</h1>
 
-    {{ include('lesson/_form.html.twig') }}
+    <div class="row mx-5 mt-3 justify-content-center">
 
-    <a href="{{ path('app_lesson_index') }}">back to list</a>
+        <h1 class="text-center mb-5">Создание новго урока</h1>
+
+        {{ include('lesson/_form.html.twig') }}
+
+        <a class="btn btn-outline-primary mt-3 fs-5 me-4" style="width: 200px" href="{{ path('app_course_show', {'id': lesson.course.id}) }}">назад к курсу</a>
+    </div>
+
 {% endblock %}

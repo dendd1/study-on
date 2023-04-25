@@ -36,7 +36,7 @@ class CourseController extends AbstractController
         $entityManager = $doctrine->getManager();
         $lesson = new Lesson();
         $lesson->setCourse($course);
-        $form = $this->createForm(LessonType::class, $lesson);
+        $form = $this->createForm(LessonType::class, $lesson, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -58,7 +58,7 @@ class CourseController extends AbstractController
     public function new(Request $request, CourseRepository $courseRepository): Response
     {
         $course = new Course();
-        $form = $this->createForm(CourseType::class, $course);
+        $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -70,6 +70,7 @@ class CourseController extends AbstractController
         return $this->renderForm('course/new.html.twig', [
             'course' => $course,
             'form' => $form,
+
         ]);
     }
 
@@ -88,13 +89,15 @@ class CourseController extends AbstractController
      */
     public function edit(Request $request, Course $course, CourseRepository $courseRepository): Response
     {
-        $form = $this->createForm(CourseType::class, $course);
+        $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $courseRepository->add($course, true);
 
-            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
+            return $this->render('course/show.html.twig', [
+                'course' => $course,
+            ]);
         }
 
         return $this->renderForm('course/edit.html.twig', [

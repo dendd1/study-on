@@ -63,7 +63,7 @@ class LessonController extends AbstractController
     public function edit(Request $request, Lesson $lesson, LessonRepository $lessonRepository): Response
     {
         $id_course = $lesson->getCourse()->getId();
-        $form = $this->createForm(LessonType::class, $lesson);
+        $form = $this->createForm(LessonType::class, $lesson, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
