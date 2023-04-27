@@ -83,6 +83,7 @@ class CourseController extends AbstractController
             'course' => $course,
         ]);
     }
+    //TODO номральные редиректы
 
     /**
      * @Route("/{id}/edit", name="app_course_edit", methods={"GET", "POST"})
@@ -94,10 +95,9 @@ class CourseController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             $courseRepository->add($course, true);
-
-            return $this->render('course/show.html.twig', [
-                'course' => $course,
-            ]);
+            return $this->redirectToRoute('app_course_show', [
+                'id' => $course->getId()
+            ], Response::HTTP_SEE_OTHER);
         }
 
         return $this->renderForm('course/edit.html.twig', [

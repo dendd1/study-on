@@ -4,8 +4,8 @@
 
 {% block body %}
     <div class="row mx-5 mt-3 justify-content-center">
-        <h1>Курс: {{ course.name }}</h1>
-        <p class="fs-4">{{ course.description }}</p>
+        <h1 class="course-name">Курс: {{ course.name }}</h1>
+        <p class="course-description fs-4">{{ course.description }}</p>
 
 
         <table class="table">
@@ -15,18 +15,18 @@
             {% for lesson in course.lessons | sort((a,b) => a.number <=> b.number) %}
                 <tr>
                     <td>
-                        <a class="text-decoration-none fs-5" href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
+                        <a class="text-decoration-none fs-5 lesson" href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
                     </td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
         <div class="d-flex justify-content-center">
-            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_index') }}">к списку курсов</a>
+            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_index') }}">К списку курсов</a>
 
-            <a class="btn btn-outline-primary mt-3 fs-5 mx-4" style="width: 200px" href="{{ path('app_course_edit', {'id': course.id}) }}">редактировать</a>
+            <a class="btn btn-outline-primary mt-3 fs-5 mx-4" style="width: 200px" href="{{ path('app_course_edit', {'id': course.id}) }}">Редактировать</a>
 
-            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_lesson_new', {'id': course.id}) }}">добавить урок</a>
+            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_lesson_new', {'id': course.id}) }}">Добавить урок</a>
         </div>
 
 

@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\LessonRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity(repositoryClass=LessonRepository::class)
@@ -28,7 +29,8 @@ class Lesson
     private $content;
 
     /**
-     * @ORM\Column(type="integer", nullable=true)
+     * @ORM\Column(type="integer")
+     * @Assert\Range(min=1, max=10000, notInRangeMessage="Порядковый номер урока должен быть между 1 и 10000")
      */
     private $number;
 

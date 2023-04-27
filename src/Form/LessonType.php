@@ -4,11 +4,11 @@ namespace App\Form;
 
 use App\Entity\Course;
 use App\Entity\Lesson;
-
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -19,7 +19,6 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 class LessonType extends AbstractType
 {
-
     private EntityManagerInterface $entityManager;
 
     public function __construct(EntityManagerInterface $entityManager)
@@ -33,6 +32,7 @@ class LessonType extends AbstractType
             ->add('name', TextType::class, [
                 'label' => 'Название урока',
                 'required' => true,
+                'empty_data' => '',
                 'constraints' => [
                     new NotBlank(['message' => 'Название урока не должно быть пустым']),
                     new Length([
@@ -47,7 +47,9 @@ class LessonType extends AbstractType
             ->add('content', TextType::class, [
                 'label' => 'Контент',
                 'required' => true,
+                'empty_data' => '',
                 'constraints' => [
+                    new NotBlank(['message' => 'Контент обязателен']),
                     new Length([
                         'max' => 1000,
                         'maxMessage' => 'Контент не может содержать более {{ limit }} символов']),
@@ -60,10 +62,9 @@ class LessonType extends AbstractType
             ->add('number', NumberType::class, [
                 'label' => 'Номер урока',
                 'required' => true,
+                'empty_data' => '',
                 'constraints' => [
-                    new Length([
-                        'max' => 1000,
-                        'maxMessage' => 'Контент не может содержать более {{ limit }} символов']),
+                    new NotBlank(['message' => 'Номер урока обязателен']),
                 ],
                 'attr' => [
                     'placeholder' => 'Укажите номер вашего урока',

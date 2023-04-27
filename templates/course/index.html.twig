@@ -19,10 +19,10 @@
             <tbody>
             {% for course in courses %}
 
-                <tr class="fs-5">
+                <tr class="fs-5 courses">
                     <td>
                         <a
-                                class="text-decoration-none"
+                                class="text-decoration-none course-show "
                                 href="{{ path('app_course_show', {'id': course.id}) }}"
                         >
                             {{ course.name }}
