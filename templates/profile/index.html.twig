@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-center">
+        <div class="pt-5">
+            <h1 class="h3 mb-3 font-weight-normal">Ваши данные</h1>
+            <div class="border border-primary rounded p-4 fs-4">
+                <p>Почта: {{ user.getUsername() }}</p>
+                <p>Доступные роли:</p>
+                <p>
+                {% for role in user.getRoles() %}
+                    {{ role }};
+                {% endfor %}
+                    </p>
+                <p>Баланс: {{ user.getBalance}}</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

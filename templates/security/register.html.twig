@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-center">
+        <div class="pt-5">
+            <div class="container" style="max-width: 400px;">
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+
+                <h3>Регистрация</h3>
+                <div class="border border-primary rounded p-4 fs-4">
+                    {{ form_start(registrationForm) }}
+
+                    {{ form_row(registrationForm.email) }}
+                    {{ form_row(registrationForm.password.first) }}
+                    {{ form_row(registrationForm.password.second) }}
+
+                    <div class="d-flex justify-content-center">
+                        <button type="submit" class="btn btn-lg btn-primary">
+                            Зарегестрироваться
+                        </button>
+                    </div>
+                    {{ form_end(registrationForm) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

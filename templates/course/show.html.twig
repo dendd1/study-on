@@ -6,8 +6,6 @@
     <div class="row mx-5 mt-3 justify-content-center">
         <h1 class="course-name">Курс: {{ course.name }}</h1>
         <p class="course-description fs-4">{{ course.description }}</p>
-
-
         <table class="table">
             <tbody>
 
@@ -15,22 +13,25 @@
             {% for lesson in course.lessons | sort((a,b) => a.number <=> b.number) %}
                 <tr>
                     <td>
-                        <a class="text-decoration-none fs-5 lesson" href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
+                        <a class="text-decoration-none fs-5 lesson"
+                           href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
                     </td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
         <div class="d-flex justify-content-center">
-            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_index') }}">К списку курсов</a>
+            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_index') }}">К
+                списку курсов</a>
+            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                <a class="btn btn-outline-primary mt-3 fs-5 ms-4" style="width: 200px"
+                   href="{{ path('app_course_edit', {'id': course.id}) }}">Редактировать</a>
 
-            <a class="btn btn-outline-primary mt-3 fs-5 mx-4" style="width: 200px" href="{{ path('app_course_edit', {'id': course.id}) }}">Редактировать</a>
+                <a class="btn btn-outline-primary mt-3 fs-5 mx-4" style="width: 200px"
+                   href="{{ path('app_lesson_new', {'id': course.id}) }}">Добавить урок</a>
 
-            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_lesson_new', {'id': course.id}) }}">Добавить урок</a>
+                {{ include('course/_delete_form.html.twig') }}
+            {% endif %}
         </div>
-
-
-        {{ include('course/_delete_form.html.twig') }}
-
     </div>
 {% endblock %}

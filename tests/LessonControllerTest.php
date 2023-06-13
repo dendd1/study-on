@@ -5,6 +5,7 @@ namespace App\Tests;
 use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
 use App\Entity\Lesson;
+use App\Tests\Mock\BillingMock;
 
 class LessonControllerTest extends AbstractTest
 {
@@ -16,6 +17,8 @@ class LessonControllerTest extends AbstractTest
     public function testGetActionsResponseOk(): void
     {
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $lessons = $this->getEntityManager()->getRepository(Lesson::class)->findAll();
         foreach ($lessons as $lesson) {
             // страница урока
@@ -32,6 +35,8 @@ class LessonControllerTest extends AbstractTest
     {
         // список курсов
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $crawler = $client->request('GET', '/course/');
         $this->assertResponseOk();
 
@@ -74,6 +79,8 @@ class LessonControllerTest extends AbstractTest
     {
         // список курсов
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $crawler = $client->request('GET', '/course/');
         $this->assertResponseOk();
 
@@ -162,6 +169,8 @@ class LessonControllerTest extends AbstractTest
     {
         // список курсов
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $crawler = $client->request('GET', '/course/');
         $this->assertResponseOk();
 
@@ -214,6 +223,8 @@ class LessonControllerTest extends AbstractTest
     {
         // список курсов
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $crawler = $client->request('GET', '/course/');
         $this->assertResponseOk();
 
@@ -304,6 +315,8 @@ class LessonControllerTest extends AbstractTest
     {
         // список курсов
         $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
         $crawler = $client->request('GET', '/course/');
         $this->assertResponseOk();
 
