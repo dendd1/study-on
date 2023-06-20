@@ -39,6 +39,7 @@ class RegisterType extends AbstractType
                         'min' => 6,
                         'minMessage' => 'Пароль должен содержать минимум 6 символов',
                         'max' => 255,
+                        'maxMessage' => 'Пароль должен содержать максимум 255 символов',
                     ]),
                 ],
             ]);

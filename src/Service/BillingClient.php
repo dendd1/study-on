@@ -8,6 +8,9 @@ use App\Exception\BillingException;
 use JMS\Serializer\SerializerBuilder;
 use App\Exception\BillingUnavailableException;
 use PHPUnit\Util\Exception;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Intl\Exception\MissingResourceException;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 
@@ -18,6 +21,9 @@ class BillingClient
     protected const AUTH_PATH = '/auth';
     protected const REGISTER_PATH = '/register';
     protected const GET_CURRENT_USER_PATH = '/users/current';
+    protected const REFRESH_TOKEN = '/token/refresh';
+    protected const GET_COURSES = '/courses';
+    protected const GET_TRANSACTIONS = '/transactions';
 
     public function __construct(ValidatorInterface $validator)
     {
@@ -25,11 +31,49 @@ class BillingClient
         $this->serializer = SerializerBuilder::create()->build();
     }
 
+    public function getTransactions($token, $type = null, $code = null, $skip_expired = false)
+    {
+        $response = $this->jsonRequest(
+            'GET',
+            self::GET_TRANSACTIONS,
+            [
+                'type' => $type,
+                'code' => $code,
+                'skip_expired' => $skip_expired
+            ],
+            [],
+            ['Authorization' => 'Bearer ' . $token]
+        );
+        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['errors'],
+                $response['code']
+            );
+        }
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new BillingUnavailableException();
+        }
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    public function getCourses()
+    {
+        $response = $this->jsonRequest(
+            'GET',
+            self::GET_COURSES,
+        );
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new BillingUnavailableException();
+        }
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
     public function auth($credentials)
     {
         $response = $this->jsonRequest(
             'POST',
             self::AUTH_PATH,
+            [],
             $credentials,
         );
 
@@ -39,7 +83,52 @@ class BillingClient
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException();
         }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR)['token'];
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+    public function getCourse($code)
+    {
+        $response = $this->jsonRequest(
+            'GET',
+            self::GET_COURSES .'/'. $code,
+        );
+        if ($response['code'] === Response::HTTP_NOT_FOUND) {
+            throw new ResourceNotFoundException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new BillingUnavailableException();
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+    public function payForCourse($token, $code)
+    {
+        $response = $this->jsonRequest(
+            'POST',
+            self::GET_COURSES .'/'. $code . '/pay',
+            [],
+            [],
+            ['Authorization' => 'Bearer ' . $token]
+        );
+        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['errors'],
+                $response['code']
+            );
+        }
+        if ($response['code'] === Response::HTTP_NOT_FOUND) {
+            throw new ResourceNotFoundException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] === Response::HTTP_NOT_ACCEPTABLE) {
+            throw new MissingResourceException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new \LogicException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new BillingUnavailableException();
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function register($credentials)
@@ -60,7 +149,7 @@ class BillingClient
                 );
             }
         }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR)['token'];
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function getCurrentUser(string $token)
@@ -68,7 +157,8 @@ class BillingClient
         $response = $this->jsonRequest(
             'GET',
             self::GET_CURRENT_USER_PATH,
-            '',
+            [],
+            [],
             ['Authorization' => 'Bearer ' . $token]
         );
         if ($response['code'] === 401) {
@@ -86,24 +176,61 @@ class BillingClient
         return $userDto;
     }
 
-    public function jsonRequest($method, string $path, $body, array $headers = [])
+    public function refreshToken(string $refreshToken): array
+    {
+        $response = $this->jsonRequest(
+            'POST',
+            self::REFRESH_TOKEN,
+            [],
+            [],
+            ['refresh_token' => $refreshToken],
+        );
+        if (isset($response['code'])) {
+            if (401 === $response['code']) {
+                throw new CustomUserMessageAuthenticationException($response['message']);
+            }
+            if (400 === $response['code']) {
+                throw new CustomUserMessageAuthenticationException(
+                    json_decode($response['body'], true, 512)['errors'][0]
+                );
+            }
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    public function jsonRequest($method, string $path, $params = [], $body = [], $headers = [])
     {
         $headers['Accept'] = 'application/json';
         $headers['Content-Type'] = 'application/json';
-        return $this->request($method, $path, json_encode($body, JSON_THROW_ON_ERROR), $headers);
+        return $this->request($method, $path, $params, $this->serializer->serialize($body, 'json'), $headers);
     }
 
-    public function request($method, string $path, $body, array $headers = [])
-    {
-        $route = $_ENV['BILLING_URL'] . $path;
-
-        $query = curl_init($route);
+    public function request(
+        $method,
+        string $path,
+        $params = [],
+        $body = [],
+        $headers = []
+    ) {
         $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
         ];
 
-        if ($method === 'POST') {
+        if (count($params) > 0) {
+            $path .= '?';
+
+            $newParameters = [];
+            foreach ($params as $name => $value) {
+                $newParameters[] = $name . '=' . $value;
+            }
+            $path .= implode('&', $newParameters);
+        }
+        $route = $_ENV['BILLING_URL'] . $path;
+        $query = curl_init($route);
+
+        if ($method === 'POST' && !empty($body)) {
             $options[CURLOPT_POSTFIELDS] = $body;
         }
 
@@ -115,14 +242,12 @@ class BillingClient
             $options[CURLOPT_HTTPHEADER] = $curlHeaders;
         }
         curl_setopt_array($query, $options);
-
         $response = curl_exec($query);
         if (curl_error($query)) {
             throw new BillingUnavailableException(curl_error($query));
         }
         $responseCode = curl_getinfo($query, CURLINFO_RESPONSE_CODE);
         curl_close($query);
-
         return [
             'code' => $responseCode,
             'body' => $response,

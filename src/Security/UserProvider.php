@@ -2,6 +2,10 @@
 
 namespace App\Security;
 
+use App\Exception\BillingUnavailableException;
+use App\Service\BillingClient;
+use DateTime;
+use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -11,6 +15,12 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
 {
+    private BillingClient $billingClient;
+
+    public function __construct(BillingClient $billingClient)
+    {
+        $this->billingClient = $billingClient;
+    }
     /**
      * Symfony calls this method if you use features like switch_user
      * or remember_me.
@@ -22,11 +32,15 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
      */
     public function loadUserByIdentifier($identifier): UserInterface
     {
-        // Load a User object from your data source or throw UserNotFoundException.
-        // The $identifier argument may not actually be a username:
-        // it is whatever value is being returned by the getUserIdentifier()
-        // method in your User class.
-        return (new User())->setEmail($identifier);
+        try {
+            $userDto = $this->billingClient->getCurrentUser($identifier);
+        } catch (BillingUnavailableException $e) {
+            throw new CustomUserMessageAuthenticationException('Сервис временно недоступен.
+             Попробуйте авторизоваться позднее');
+        }
+
+        return User::fromDto($userDto)
+            ->setApiToken($identifier);
     }
 
     /**
@@ -54,9 +68,26 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
             throw new UnsupportedUserException(sprintf('Invalid user class "%s".', get_class($user)));
         }
 
-        // Return a User object after making sure its data is "fresh".
-        // Or throw a UsernameNotFoundException if the user no longer exists.
-        return $user;
+        try {
+            [$exp, $email, $roles] = User::jwtDecode($user->getApiToken());
+        } catch (\JsonException $e) {
+            throw new CustomUserMessageAuthenticationException('Сервис временно недоступен.
+             Попробуйте авторизоваться позднее');
+        }
+
+        $tokenExpiredTime = (new DateTime())->setTimestamp($exp + 20);
+
+        if ($tokenExpiredTime <= new DateTime()) {
+            try {
+                $tokens = $this->billingClient->refreshToken($user->getRefreshToken());
+                $user->setApiToken($tokens['token'])
+                    ->setRefreshToken($tokens['refresh_token']);
+            } catch (BillingUnavailableException | \JsonException $e) {
+                throw new CustomUserMessageAuthenticationException('Сервис временно недоступен.
+                 Попробуйте авторизоваться позднее');
+            }
+        }
+        return $this->loadUserByIdentifier($user->getApiToken());
     }
 
     /**

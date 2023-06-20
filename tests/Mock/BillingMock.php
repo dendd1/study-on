@@ -8,6 +8,8 @@ use App\DTO\UserDTO;
 use App\Security\User;
 use App\Tests\AbstractTest;
 use App\Service\BillingClient;
+use DateInterval;
+use DateTimeImmutable;
 use JMS\Serializer\SerializerBuilder;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -22,34 +24,118 @@ class BillingMock extends BillingClient
         'username' => 'user@mail.ru',
         'password' => '123456',
         'roles' => ['ROLE_USER'],
-        'balance' => 0.0,
+        'balance' => 100.0,
     ];
 
     private static array $admin = [
         'username' => 'admin@mail.ru',
         'password' => '123456',
         'roles' => ['ROLE_USER', 'ROLE_SUPER_ADMIN'],
+        'balance' => 1000.0,
+    ];
+
+    public static array $new_user = [
+        'username' => 'newUser@mail.ru',
+        'password' => '123456',
+        'roles' => ['ROLE_USER'],
         'balance' => 0.0,
     ];
 
+    private static array $courses = [
+        [
+            'code' => 'car-1',
+            'type' => 'free'
+        ],
+        [
+            'code' => 'cooking-1',
+            'type' => 'rent',
+            'price' => 10
+        ],
+        [
+            'code' => 'cleanCourse',
+            'type' => 'buy',
+            'price' => 20
+        ],
+        [
+            'code' => 'test_buy',
+            'type' => 'buy',
+            'price' => 20
+        ],
+        [
+            'code' => 'test_rent',
+            'type' => 'rent',
+            'price' => 20
+        ]
+    ];
+
+    private static array $transactions = [
+        [
+            "id" => 2,
+            "type" => "payment",
+            "code" => "cooking-1",
+            "amount" => 10
+        ],
+        [
+            "id" => 3,
+            "type" => "payment",
+            "code" => "cleanCourse",
+            "amount" => 20
+        ]
+    ];
+
+
     private static string $newToken;
+
     public function __construct()
     {
-        self::$user["token"] = base64_encode(self::$user["username"] . time());
-        self::$admin["token"] = base64_encode(self::$admin["username"] . time());
-        self::$newToken = base64_encode("new_token" . time());
+        $created = (new DateTimeImmutable());
+        $expires = ((new DateTimeImmutable())->add(new DateInterval('P1W')));
+
+        self::$user['token'] = $this->generateToken(self::$user['roles'], self::$user['username']);
+        self::$admin['token'] = $this->generateToken(self::$admin['roles'], self::$admin['username']);
+        self::$new_user['token'] = $this->generateToken(self::$user['roles'], 'test@example.com');
+        self::$new_user['refresh_token'] = $this->generateRefreshToken(self::$user['roles'], 'test@example.com');
+        self::$user['refresh_token'] = $this->generateRefreshToken(self::$user['roles'], self::$user['username']);
+        self::$admin['refresh_token'] = $this->generateRefreshToken(self::$admin['roles'], self::$admin['username']);
+        foreach (self::$transactions as &$transaction) {
+            $transaction['created']['date'] = $created;
+            $transaction['expires']['date'] = $expires;
+        }
     }
 
+    private function generateToken($roles, $username): string
+    {
+        $data = [
+            'email' => $username,
+            'roles' => $roles,
+            'exp' => (new \DateTime('+ 1 hour'))->getTimestamp(),
+        ];
+        $query = base64_encode(json_encode($data));
+
+        return 'header.' . $query . '.signature';
+    }
+
+    private function generateRefreshToken($roles, $username): string
+    {
+        $data = [
+            'email' => $username,
+            'roles' => $roles,
+            'exp' => (new \DateTime('+ 1 month'))->getTimestamp(),
+        ];
+        $query = base64_encode(json_encode($data));
+
+        return 'header.' . $query . '.signature';
+    }
     public function auth($credentials)
     {
         $users_to_check = [self::$user, self::$admin];
 
         foreach ($users_to_check as $user) {
-            if (
-                $credentials["username"] == $user["username"]
-                && $credentials["password"] == $user["password"]
-            ) {
-                return $user['token'];
+            if ($credentials["username"] == $user["username"] && $credentials["password"] == $user["password"]) {
+                return [
+                    'token' => $user['token'],
+                    'refresh_token' => $user['refresh_token'],
+                ];
             }
         }
         throw new CustomUserMessageAuthenticationException('Неправильные логин или пароль');
@@ -63,8 +149,22 @@ class BillingMock extends BillingClient
                 throw new CustomUserMessageAuthenticationException('Данная почта уже зарегистрирована');
             }
         }
-        //return ['token' => self::$newToken, 'roles' => ['ROLE_USER']];
-        return self::$newToken;
+        return [
+            'token' => self::$new_user['token'],
+            'refresh_token' => self::$new_user['refresh_token'],
+            'roles' => ['ROLE_USER']
+        ];
+    }
+    public function refreshToken(string $refreshToken): array
+    {
+        [$exp, $email, $roles] = User::jwtDecode($refreshToken);
+        if (self::$user['username'] == $email) {
+            return ['token' => self::$user['token'], 'refresh_token' => self::$user['refresh_token']];
+        }
+        if (self::$admin['username'] == $email) {
+            return ['token' => self::$admin['token'], 'refresh_token' => self::$admin['refresh_token']];
+        }
+        return ['error' => 'неверные данные'];
     }
 
     public function getCurrentUser(string $token)
@@ -93,4 +193,68 @@ class BillingMock extends BillingClient
     {
         self::authClient($client, self::$admin['username'], self::$admin['password']);
     }
+
+    public function getCourse($code)
+    {
+        foreach (self::$courses as $course) {
+            if ($course['code'] == $code) {
+                $result = ['code' => $course['code'], 'type' => $course['type'],];
+                if ($course['type'] != 'free') {
+                    $result['price'] = $course['price'];
+                }
+                return $result;
+            }
+        }
+        throw new CustomUserMessageAccountStatusException('Нет курса с таким кодом');
+    }
+    public function getCourses()
+    {
+        return self::$courses;
+    }
+
+    public function newCourse()
+    {
+        return ['success' => true];
+    }
+    public function editCourse($token, $code)
+    {
+        foreach (self::$courses as $course) {
+            if ($course['code'] == $code) {
+                return ['success' => true];
+            }
+        }
+        throw new CustomUserMessageAccountStatusException('Нет курса с таким кодом');
+    }
+
+    public function payForCourse($refreshToken, $code)
+    {
+        [$exp, $email, $roles] = User::jwtDecode($refreshToken);
+        $pay_course = [];
+        foreach (self::$courses as $course) {
+            if ($course['code'] == $code) {
+                $pay_course = ['code' => $course['code'], 'type' => $course['type'], 'price' => $course['price']];
+            }
+        }
+        // if (self::$user['username'] == $email) {
+        //     self::$user['balance']-=$pay_course['price'];
+        // }
+        // if (self::$admin['username'] == $email) {
+        //     self::$admin['balance']-=$pay_course['price'];
+        // }
+        if (self::$new_user['username'] == $email) {
+            throw new CustomUserMessageAccountStatusException('Недостаточно денег');
+        }
+        return ['success' => true];
+    }
+//    public function getTransactions($token, $type = Null, $code, $skip_expired): array
+//    {
+//        [$exp, $email, $roles] = User::jwtDecode($token);
+//        $result = [];
+//        foreach (self::$transactions as $transaction) {
+//            if ($transaction['code'] == $code) {
+//                $result[] = $transaction;
+//            }
+//        }
+//        return $result;
+//    }
 }

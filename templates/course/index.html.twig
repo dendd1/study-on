@@ -13,7 +13,9 @@
             <tr class="fs-3">
                 <th>Название</th>
                 <th>Описание</th>
-
+                {% if course.price_msg is defined %}
+                    <th>Стоимость</th>
+                {% endif %}
             </tr>
             </thead>
             <tbody>
@@ -29,6 +31,11 @@
                         </a>
                     </td>
                     <td>{{ course.description }}</td>
+                    {% if course.price_msg is defined %}
+                        <td>
+                            <p>{{ course.price_msg }}</p>
+                        </td>
+                    {% endif %}
 
                 </tr>
             {% else %}
@@ -44,4 +51,5 @@
         {% endif %}
 
     </div>
+
 {% endblock %}

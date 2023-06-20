@@ -15,6 +15,7 @@ use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Authenticator\AbstractLoginFormAuthenticator;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\CsrfTokenBadge;
+use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Credentials\PasswordCredentials;
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
@@ -39,31 +40,33 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
     {
         $email = $request->request->get('email', '');
         $password = $request->request->get('password', '');
-
+        $request->getSession()->set(Security::LAST_USERNAME, $email);
         try {
-            $token = $this->billingClient->auth(['username' => $email, 'password' => $password]);
+            $token_data = $this->billingClient->auth(['username' => $email, 'password' => $password]);
         } catch (BillingUnavailableException | JsonException $e) {
             throw new CustomUserMessageAuthenticationException("Сервис временно недоступен.
              Попробуйте авторизоваться позднее.");
         }
         $request->getSession()->set(Security::LAST_USERNAME, $email);
-
-        $userLoader = function ($token): UserInterface {
+        $refreshToken = $token_data['refresh_token'];
+        $token = $token_data['token'];
+        $userLoader = function ($token) use ($refreshToken): UserInterface {
             try {
                 $userDto = $this->billingClient->getCurrentUser($token);
-            } catch (BillingUnavailableException | JsonException $e) {
-                throw new CustomUserMessageAuthenticationException("Сервис временно недоступен.
-                Попробуйте авторизоваться позднее.");
+            } catch (BillingUnavailableException|JsonException $e) {
+                throw new CustomUserMessageAuthenticationException('Сервис временно недоступен.
+                 Попробуйте авторизоваться позднее');
             }
             return User::fromDto($userDto)
-                ->setApiToken($token);
+                ->setApiToken($token)
+                ->setRefreshToken($refreshToken);
         };
-
         //dd($token);
         return new SelfValidatingPassport(
-            new UserBadge($token, $userLoader),
+            new UserBadge($token_data['token'], $userLoader),
             [
                 new CsrfTokenBadge('authenticate', $request->get('_csrf_token')),
+                new RememberMeBadge(),
             ]
         );
     }

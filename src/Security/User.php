@@ -13,6 +13,27 @@ class User implements UserInterface
 
     private $apiToken;
 
+    private $refreshToken;
+
+
+    /**
+     * @return mixed
+     */
+    public function getRefreshToken()
+    {
+        return $this->refreshToken;
+    }
+
+    /**
+     * @param string $refreshToken
+     * @return User
+     */
+    public function setRefreshToken(string $refreshToken): self
+    {
+        $this->refreshToken = $refreshToken;
+
+        return $this;
+    }
     public function getEmail(): ?string
     {
         return $this->email;
@@ -108,5 +129,15 @@ class User implements UserInterface
         return (new self())
             ->setEmail($userDto->getUsername())
             ->setRoles($userDto->getRoles());
+    }
+
+    /**
+     * @throws UserInterface
+     */
+    public static function jwtDecode(string $token): array
+    {
+        $parts = explode('.', $token);
+        $payload = json_decode(base64_decode($parts[1]), true, 512, JSON_THROW_ON_ERROR);
+        return [$payload['exp'], $payload['email'], $payload['roles']];
     }
 }

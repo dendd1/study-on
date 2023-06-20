@@ -58,6 +58,21 @@ class UserTest extends AbstractTest
         $this->assertResponseRedirect();
     }
 
+    public function testNoEmailAuth(): void
+    {
+        $client = $this->getClient();
+        $crawler = $client->request('GET', '/login');
+        $this->assertResponseOk();
+
+        $submitBtn = $crawler->selectButton('Авторизоваться');
+        $login = $submitBtn->form([
+            'email' => "adn@mail.ru",
+            'password' => "123456",
+        ]);
+        $client->submit($login);
+        $this->assertResponseRedirect();
+        $this->assertEquals('Неправильные логин или пароль', $crawler->filter('.alert-danger')->text());
+    }
     protected function getFixtures(): array
     {
         return [AppFixtures::class];
