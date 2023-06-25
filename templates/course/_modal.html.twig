@@ -1,5 +1,5 @@
 <div class="modal fade" tabindex="-1" aria-hidden="true" data-modal-form-target="modal">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="payConfirmModalLabel">Оплата курса</h5>
@@ -7,15 +7,17 @@
             </div>
             {% if status is null %}
                 <div class="modal-body">
-                    <p>С вашего счета будет списано {{ course.price }} рублей</p>
+                    <p class="fs-4">С вашего счета будет списано {{ course.price }} рублей</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-primary mt-3 fs-5 mx-4" data-bs-dismiss="modal">
                         Отмена
                     </button>
                     <form name="myform" action="{{ path('app_course_pay', {'id': course.id}) }}" method="post">
                         <input type="hidden" name="_token" value="{{ csrf_token('pay' ~ course.id) }}"/>
-                        <button class="btn btn-info">Продолжить</button>
+                        <button class="btn btn-primary mt-3 fs-5 mx-4">
+                            Продолжить
+                        </button>
                     </form>
                 </div>
             {% else %}
@@ -23,7 +25,7 @@
                     <p> {{ status }} </p>
                 </div>
                 <div class="modal-footer">
-                    <a class="btn btn-outline-info" data-bs-dismiss="modal">
+                    <a class="btn btn-outline-primary mt-3 fs-5 mx-4" data-bs-dismiss="modal">
                         Закрыть
                     </a>
                 </div>

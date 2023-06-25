@@ -13,7 +13,7 @@
             <tr class="fs-3">
                 <th>Название</th>
                 <th>Описание</th>
-                {% if course.price_msg is defined %}
+                {% if course.type is defined %}
                     <th>Стоимость</th>
                 {% endif %}
             </tr>
@@ -31,10 +31,35 @@
                         </a>
                     </td>
                     <td>{{ course.description }}</td>
-                    {% if course.price_msg is defined %}
-                        <td>
-                            <p>{{ course.price_msg }}</p>
-                        </td>
+                    {% if course.type is defined %}
+
+                        {% if course.type == 'free' %}
+                            <td>
+                                <p class="text-danger"> Бесплатно</p>
+                            </td>
+
+                        {% elseif course.type == 'buy' %}
+                            {% if course.is_paid is defined %}
+                                <td>
+                                    <p class="text-primary"> Приобретено </p>
+                                </td>
+                            {% else %}
+                                <td>
+                                    <p> {{ course.price }} ₽</p>
+                                </td>
+                            {% endif %}
+
+                        {% elseif course.type == 'rent' %}
+                            {% if course.is_rent is defined %}
+                                <td>
+                                    <p class="text-primary"> Арендовано до {{ course.expires }} </p>
+                                </td>
+                            {% else %}
+                                <td>
+                                    <p> {{ course.price }} ₽ в месяц</p>
+                                </td>
+                            {% endif %}
+                        {% endif %}
                     {% endif %}
 
                 </tr>
@@ -47,7 +72,8 @@
         </table>
 
         {% if is_granted('ROLE_SUPER_ADMIN') %}
-            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_new') }}">Добавить курс</a>
+            <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_new') }}">Добавить
+                курс</a>
         {% endif %}
 
     </div>

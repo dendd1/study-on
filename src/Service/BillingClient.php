@@ -136,6 +136,7 @@ class BillingClient
         $response = $this->jsonRequest(
             'POST',
             self::REGISTER_PATH,
+            [],
             $credentials,
         );
 

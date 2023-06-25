@@ -13,7 +13,7 @@ class User implements UserInterface
 
     private $apiToken;
 
-    private $refreshToken;
+    private $refresh_token;
 
 
     /**
@@ -21,16 +21,16 @@ class User implements UserInterface
      */
     public function getRefreshToken()
     {
-        return $this->refreshToken;
+        return $this->refresh_token;
     }
 
     /**
-     * @param string $refreshToken
+     * @param string $refresh_token
      * @return User
      */
-    public function setRefreshToken(string $refreshToken): self
+    public function setRefreshToken(string $refresh_token): self
     {
-        $this->refreshToken = $refreshToken;
+        $this->$refresh_token = $refresh_token;
 
         return $this;
     }

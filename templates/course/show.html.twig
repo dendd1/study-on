@@ -6,66 +6,15 @@
     <div class="row mx-5 mt-3 justify-content-center">
         <h1 class="course-name">Курс: {{ course.name }}</h1>
         <p class="course-description fs-4">{{ course.description }}</p>
-        {% if not course.isPaid and course.type !='free' %}
-            {% if billingUser.balance > course.price %}
-                <div {{ stimulus_controller('modal-form') }}>
-{#                    <a class="btn btn-primary" data-action="modal-form#openModal">#}
-{#                        {% if course.type =='buy' %}#}
-{#                            Купить#}
-{#                        {% elseif course.type =='rent' %}#}
-{#                            Арендовать#}
-{#                        {% endif %}#}
-{#                    </a>#}
-{#                    {{ include('course/_modal.html.twig') }}#}
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="payConfirmModalLabel">Оплата курса</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            {% if status is null %}
-                                <div class="modal-body">
-                                    <p>С вашего счета будет списано {{ course.price }} рублей</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
-                                        Отмена
-                                    </button>
-                                    <form name="myform" action="{{ path('app_course_pay', {'id': course.id}) }}" method="post">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('pay' ~ course.id) }}"/>
-                                        <button class="btn btn-info">Продолжить</button>
-                                    </form>
-                                </div>
-                            {% else %}
-                                <div class="modal-body">
-                                    <p> {{ status }} </p>
-                                </div>
-                                <div class="modal-footer">
-                                    <a class="btn btn-outline-info" data-bs-dismiss="modal">
-                                        Закрыть
-                                    </a>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
 
-
-
-
-
-                </div>
-            {% else %}
-                <p class="fs-4 text-danger">Недостаточно средств для оплаты</p>
-            {% endif %}
-        {% endif %}
         <table class="table">
             <tbody>
 
-            <th class="fs-5">Уроки:</th>
-            {% if not course.isPaid %}
+            <th class="fs-4">Уроки:</th>
+            {% if not course.isPaid and course.type !='free' %}
                 <tr>
                     <td>
-                        <p>Курс необходимо преобрести, чтобы иметь доступ к урокам.</p>
+                        <p class="text-center fs-4 mt-3">Курс необходимо приобрести, чтобы иметь доступ к урокам.</p>
                     </td>
                 </tr>
             {% else %}
@@ -80,6 +29,25 @@
             {% endif %}
             </tbody>
         </table>
+        {% if not course.isPaid and course.type !='free' %}
+            <div class="d-flex justify-content-center">
+                {% if billingUser.balance > course.price %}
+                    <div {{ stimulus_controller('modal-form') }}>
+                        <a class="btn btn-outline-primary mt-3 fs-5 mx-4" data-action="modal-form#openModal">
+                            {% if course.type =='buy' %}
+                                Купить
+                            {% elseif course.type =='rent' %}
+                                Арендовать
+                            {% endif %}
+                        </a>
+                        {{ include('course/_modal.html.twig') }}
+
+                    </div>
+                {% else %}
+                    <p class="fs-4 text-danger">Недостаточно средств для оплаты</p>
+                {% endif %}
+            </div>
+        {% endif %}
         <div class="d-flex justify-content-center">
             <a class="btn btn-outline-primary mt-3 fs-5" style="width: 200px" href="{{ path('app_course_index') }}">К
                 списку курсов</a>

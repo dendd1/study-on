@@ -45,19 +45,12 @@ class CourseController extends AbstractController
         $billingCourses = ArrayService::arrayByKey($this->billingClient->getCourses(), 'code');
 
         foreach ($courses as $code => $course) {
-            if (isset($billingCourses[$code])) {
-                if ($billingCourses[$code]['type'] === PaymentStatus::RENT_NAME) {
-                    $courses[$code]['type'] = PaymentStatus::RENT_NAME;
-                    $courses[$code]['price_msg'] = $billingCourses[$code]['price'] . '₽ в неделю';
-                } elseif ($billingCourses[$code]['type'] === PaymentStatus::BUY_NAME) {
-                    $courses[$code]['type'] = PaymentStatus::BUY_NAME;
-                    $courses[$code]['price_msg'] = $billingCourses[$code]['price'] . '₽';
-                } elseif ($billingCourses[$code]['type'] === PaymentStatus::FREE_NAME) {
-                    $courses[$code]['type'] = PaymentStatus::FREE_NAME;
-                    $courses[$code]['price_msg'] = 'Бесплатный';
-                }
+            $courses[$code]['type'] = $billingCourses[$code]['type'];
+            if ($courses[$code]['type'] != 'free') {
+                $courses[$code]['price'] = $billingCourses[$code]['price'];
             }
         }
+
         if ($this->isGranted('ROLE_USER')) {
             $user = $this->security->getUser();
 
@@ -67,11 +60,11 @@ class CourseController extends AbstractController
             foreach ($courses as $code => $course) {
                 if (isset($transactions[$code])) {
                     if ($course['type'] === PaymentStatus::RENT_NAME) {
+                        $courses[$code]['is_rent'] = true;
                         $expiresAt = $transactions[$code]['expires'];
-                        $courses[$code]['price_msg'] = 'Арендовано до '
-                            . date('d/m/y H:i:s', strtotime($expiresAt['date']));
+                        $courses[$code]['expires'] = date('d/m/y H:i:s', strtotime($expiresAt['date']));
                     } elseif ($course['type'] === PaymentStatus::BUY_NAME) {
-                        $courses[$code]['price_msg'] = 'Куплено';
+                        $courses[$code]['is_paid'] = true;
                     }
                 }
             }
@@ -134,7 +127,7 @@ class CourseController extends AbstractController
     {
         $user = $this->security->getUser();
         if (!$user) {
-            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_login', [], Response::HTTP_SEE_OTHER);
         }
         $billingCourse = $this->billingClient->getCourse($course->getCode());
         $billingUser = $this->billingClient->getCurrentUser($user->getApiToken());
@@ -173,7 +166,7 @@ class CourseController extends AbstractController
                 $course['price_msg'] = 'Куплено';
             }
         }
-        $status=null;
+        $status = null;
         if ($request->query->get('status') != null) {
             $status = PaymentStatus::PAY_NAMES[$request->query->get('status')];
         }
