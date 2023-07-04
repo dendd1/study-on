@@ -52,7 +52,7 @@ class BillingMock extends BillingClient
             'price' => 10
         ],
         [
-            'code' => 'cleanCourse',
+            'code' => 'cleanCourse-1',
             'type' => 'buy',
             'price' => 20
         ],
@@ -78,7 +78,7 @@ class BillingMock extends BillingClient
         [
             "id" => 3,
             "type" => "payment",
-            "code" => "cleanCourse",
+            "code" => "cleanCourse-1",
             "amount" => 20
         ]
     ];
@@ -88,6 +88,7 @@ class BillingMock extends BillingClient
 
     public function __construct()
     {
+
         $created = (new DateTimeImmutable());
         $expires = ((new DateTimeImmutable())->add(new DateInterval('P1W')));
 
@@ -126,6 +127,7 @@ class BillingMock extends BillingClient
 
         return 'header.' . $query . '.signature';
     }
+
     public function auth($credentials)
     {
         $users_to_check = [self::$user, self::$admin];
@@ -155,6 +157,7 @@ class BillingMock extends BillingClient
             'roles' => ['ROLE_USER']
         ];
     }
+
     public function refreshToken(string $refreshToken): array
     {
         [$exp, $email, $roles] = User::jwtDecode($refreshToken);
@@ -207,16 +210,18 @@ class BillingMock extends BillingClient
         }
         throw new CustomUserMessageAccountStatusException('Нет курса с таким кодом');
     }
+
     public function getCourses()
     {
         return self::$courses;
     }
 
-    public function newCourse()
+    public function newCourse($token, $course)
     {
         return ['success' => true];
     }
-    public function editCourse($token, $code)
+
+    public function editCourse($token, $code, $course2)
     {
         foreach (self::$courses as $course) {
             if ($course['code'] == $code) {

@@ -45,6 +45,7 @@ class CourseRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
     }
+
 //    /**
 //     * @return Course[] Returns an array of Course objects
 //     */

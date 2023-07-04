@@ -49,7 +49,7 @@ class AppCustomAuthenticator extends AbstractLoginFormAuthenticator
         }
         $request->getSession()->set(Security::LAST_USERNAME, $email);
         $refreshToken = $token_data['refresh_token'];
-        $token = $token_data['token'];
+
         $userLoader = function ($token) use ($refreshToken): UserInterface {
             try {
                 $userDto = $this->billingClient->getCurrentUser($token);

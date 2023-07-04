@@ -30,7 +30,7 @@ class User implements UserInterface
      */
     public function setRefreshToken(string $refresh_token): self
     {
-        $this->$refresh_token = $refresh_token;
+        $this->refresh_token = $refresh_token;
 
         return $this;
     }

@@ -5,32 +5,34 @@ namespace App\Tests;
 use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
 use App\Tests\Mock\BillingMock;
+use JMS\Serializer\SerializerInterface;
 
 class CourseControllerTest extends AbstractTest
 {
+    private SerializerInterface $serializer;
     protected function getFixtures(): array
     {
         return [AppFixtures::class];
     }
 
-//    public function urlProviderSuccessful(): \Generator
-//    {
-//        yield ['/'];
-//        yield ['/course/'];
-//        yield ['/course/new'];
-//    }
-//
-//    /**
-//     * @dataProvider urlProviderSuccessful
-//     */
-//    public function testPageSuccessful($url): void
-//    {
-//        $client = $this->getClient();
-//        $billingMock = new BillingMock();
-//        $billingMock->authAsAdmin($client);
-//        $client->request('GET', $url);
-//        $this->assertResponseOk();
-//    }
+    public function urlProviderSuccessful(): \Generator
+    {
+        yield ['/'];
+        yield ['/course'];
+        yield ['/course/new'];
+    }
+
+    /**
+     * @dataProvider urlProviderSuccessful
+     */
+    public function testPageSuccessful($url): void
+    {
+        $client = $this->getClient();
+        $billingMock = new BillingMock();
+        $billingMock->authAsAdmin($client);
+        $client->request('GET', $url);
+        $this->assertResponseOk();
+    }
 //
 //    public function urlProviderNotFound(): \Generator
 //    {

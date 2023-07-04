@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\DTO\CourseDTO;
 use App\Entity\Course;
 use App\Entity\Lesson;
 use App\Enum\PaymentStatus;
@@ -19,6 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Intl\Exception\MissingResourceException;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Security\Core\Security;
 
 /**
@@ -106,12 +108,34 @@ class CourseController extends AbstractController
         $course = new Course();
         $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
-
         if ($form->isSubmitted() && $form->isValid()) {
-            $courseRepository->add($course, true);
+            $name = $form->get('name')->getData();
+            $type = $form->get('type')->getData();
+            $price = $form->get('price')->getData();
+            $code = $form->get('code')->getData();
+            if ($courseRepository->count(['code' => $code]) > 0) {
+                throw new LogicException('Курс с таким кодом уже существует');
+            }
+            if ($type == PaymentStatus::FREE) {
+                $price = 0;
+            } elseif ($price == 0) {
+                throw new ResourceNotFoundException('Курс платный, укажите цену');
+            }
+            $user = $this->security->getUser();
+            $courseDTO = CourseDTO::getCourseDTO($name, $code, $type, $price);
+
+            $response = $this->billingClient->newCourse($user->getApiToken(), $courseDTO);
+            if (isset($response['success'])) {
+                $courseRepository->add($course, true);
+            }
 
             return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
         }
+//        if ($form->isSubmitted() && $form->isValid()) {
+//            $courseRepository->add($course, true);
+//
+//            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
+//        }
 
         return $this->renderForm('course/new.html.twig', [
             'course' => $course,
@@ -210,14 +234,32 @@ class CourseController extends AbstractController
      */
     public function edit(Request $request, Course $course, CourseRepository $courseRepository): Response
     {
-        $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
+        $oldCode = $course->getCode();
+        $billingCourse = $this->billingClient->getCourse($course->getCode());
+        $oldType = $billingCourse['type'];
+        $form = $this->createForm(CourseType::class, $course);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $courseRepository->add($course, true);
-            return $this->redirectToRoute('app_course_show', [
-                'id' => $course->getId()
-            ], Response::HTTP_SEE_OTHER);
+            $name = $form->get('name')->getData();
+            if ($oldType != PaymentStatus::BUY) {
+                $type = $form->get('type')->getData();
+            } else {
+                $type = $oldType;
+            }
+            $price = $form->get('price')->getData();
+            $code = $form->get('code')->getData();
+            if ($oldCode != $code && $courseRepository->count(['code' => $code]) > 0) {
+                throw new LogicException('Курс с таким кодом уже существует');
+            }
+            $user = $this->security->getUser();
+            $courseDTO = CourseDTO::getCourseDTO($name, $code, $type, $price);
+            $response = $this->billingClient->editCourse($user->getApiToken(), $oldCode, $courseDTO);
+            if (isset($response['success'])) {
+                $courseRepository->add($course, true);
+            }
+
+            return $this->redirectToRoute('app_course_show', ['id' => $course->getId()], Response::HTTP_SEE_OTHER);
         }
 
         return $this->renderForm('course/edit.html.twig', [

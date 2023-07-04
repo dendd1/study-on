@@ -3,6 +3,8 @@
 namespace App\Service;
 
 use App\DTO\UserDTO;
+use App\Exception\CourseAlreadyExistException;
+use App\Exception\CourseValidationException;
 use JMS\Serializer\Serializer;
 use App\Exception\BillingException;
 use JMS\Serializer\SerializerBuilder;
@@ -85,11 +87,12 @@ class BillingClient
         }
         return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
+
     public function getCourse($code)
     {
         $response = $this->jsonRequest(
             'GET',
-            self::GET_COURSES .'/'. $code,
+            self::GET_COURSES . '/' . $code,
         );
         if ($response['code'] === Response::HTTP_NOT_FOUND) {
             throw new ResourceNotFoundException(json_decode($response['body'], true)['errors'], $response['code']);
@@ -100,11 +103,12 @@ class BillingClient
 
         return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
+
     public function payForCourse($token, $code)
     {
         $response = $this->jsonRequest(
             'POST',
-            self::GET_COURSES .'/'. $code . '/pay',
+            self::GET_COURSES . '/' . $code . '/pay',
             [],
             [],
             ['Authorization' => 'Bearer ' . $token]
@@ -183,11 +187,15 @@ class BillingClient
             'POST',
             self::REFRESH_TOKEN,
             [],
-            [],
             ['refresh_token' => $refreshToken],
+            [],
         );
         if (isset($response['code'])) {
             if (401 === $response['code']) {
+                echo('<pre>');
+                print_r($response);
+                echo('</pre>');
+                echo($refreshToken);
                 throw new CustomUserMessageAuthenticationException($response['message']);
             }
             if (400 === $response['code']) {
@@ -195,6 +203,62 @@ class BillingClient
                     json_decode($response['body'], true, 512)['errors'][0]
                 );
             }
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    public function editCourse($token, $code, $course)
+    {
+        $response = $this->jsonRequest(
+            'POST',
+            self::GET_COURSES . '/' . $code . '/edit',
+            [],
+            $course,
+            ['Authorization' => 'Bearer ' . $token]
+        );
+        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['errors'],
+                $response['code']
+            );
+        }
+        if ($response['code'] === Response::HTTP_FORBIDDEN) {
+            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new CourseAlreadyExistException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    public function newCourse($token, $course)
+    {
+        $response = $this->jsonRequest(
+            'POST',
+            self::GET_COURSES . '/' . 'new',
+            [],
+            $course,
+            ['Authorization' => 'Bearer ' . $token]
+        );
+        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['errors'],
+                $response['code']
+            );
+        }
+        if ($response['code'] === Response::HTTP_FORBIDDEN) {
+            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new CourseAlreadyExistException(json_decode($response['body'], true)['errors'], $response['code']);
+        }
+        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
+            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
         }
 
         return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);

@@ -75,9 +75,8 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
              Попробуйте авторизоваться позднее');
         }
 
-        $tokenExpiredTime = (new DateTime())->setTimestamp($exp + 20);
 
-        if ($tokenExpiredTime <= new DateTime()) {
+        if ($exp <= time()+20) {
             try {
                 $tokens = $this->billingClient->refreshToken($user->getRefreshToken());
                 $user->setApiToken($tokens['token'])
@@ -87,7 +86,7 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
                  Попробуйте авторизоваться позднее');
             }
         }
-        return $this->loadUserByIdentifier($user->getApiToken());
+        return $user;
     }
 
     /**
