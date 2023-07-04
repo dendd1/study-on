@@ -24,7 +24,7 @@ class ProfileController extends AbstractController
     public function index(): Response
     {
         $user = $this->billingClient->getCurrentUser($this->getUser()->getApiToken());
-        $transactions = $this->billingClient->getTransactions($this->getUser()->getApiToken(), null, null, false);
+        $transactions = $this->billingClient->getTransactions($this->getUser()->getApiToken());
 
         return $this->render('profile/index.html.twig', [
             'user' => $user,

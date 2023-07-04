@@ -37,7 +37,7 @@ security:
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/profile, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/logout, roles: IS_AUTHENTICATED_FULLY }
-        - { path: ^/(course|lesson)/\d+$, roles: ROLE_SUPER_ADMIN }
+        - { path: ^/(course|lesson)/\d+$, methods: POST, roles: ROLE_SUPER_ADMIN }
         - { path: ^/lesson/\d+$, roles: ROLE_USER }
         - { path: ^/course/new, roles: ROLE_SUPER_ADMIN }
         - { path: ^/(course|lesson)/\d+/edit$, roles: ROLE_SUPER_ADMIN }

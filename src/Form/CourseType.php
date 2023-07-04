@@ -80,7 +80,7 @@ class CourseType extends AbstractType
                         'maxMessage' => 'Описание  курса не может содержать более {{ limit }} символов']),
                 ],
                 'attr' => [
-                    'placeholder' => 'Опишите ваш курс курса',
+                    'placeholder' => 'Опишите ваш курс',
                     'class' => 'form-control w-100 mb-4 fs-5'
                 ]
             ])
@@ -92,7 +92,7 @@ class CourseType extends AbstractType
                     'покупка' => 2,
                 ],
                 'attr' => [
-                    'placeholder' => 'Опишите ваш курс курса',
+                    'placeholder' => 'Опишите ваш курс',
                     'class' => 'form-control w-100 mb-4 fs-5'
                 ],
                 'required' => true,

@@ -11,10 +11,10 @@
             <tbody>
 
             <th class="fs-4">Уроки:</th>
-            {% if not course.isPaid and course.type !='free' %}
+            {% if not course.isPaid and course.type !='free' and not is_granted('ROLE_SUPER_ADMIN') %}
                 <tr>
                     <td>
-                        <p class="text-center fs-4 mt-3">Курс необходимо приобрести, чтобы иметь доступ к урокам.</p>
+                        <p class="text-center fs-4 my-5">Курс необходимо приобрести, чтобы иметь доступ к урокам.</p>
                     </td>
                 </tr>
             {% else %}
@@ -25,6 +25,14 @@
                                href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
                         </td>
                     </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5" align="center">
+                                <p class="fs-2 text-danger my-5">
+                                    Похоже, что уроков тут пока нет...
+                                </p>
+                            </td>
+                        </tr>
                 {% endfor %}
             {% endif %}
             </tbody>

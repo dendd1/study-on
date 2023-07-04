@@ -10,49 +10,51 @@
                 <p>Почта: {{ user.getUsername() }}</p>
                 <p>Доступные роли:</p>
                 <p>
-                {% for role in user.getRoles() %}
-                    {{ role }};
-                {% endfor %}
-                    </p>
-                <p>Баланс: {{ user.getBalance}}</p>
+                    {% for role in user.getRoles() %}
+                        {{ role }};
+                    {% endfor %}
+                </p>
+                <p>Баланс: {{ user.getBalance }}</p>
             </div>
         </div>
     </div>
 
     <div class="row mx-5 mt-3 justify-content-center">
 
+        {% if transactions|length > 0 %}
+            <h1 class="text-center">Ваши операции</h1>
 
-        <h1 class="text-center">Ваши операции</h1>
-
-        <table class="table">
-            <thead>
-            <tr class="fs-3">
-                <th>Описание</th>
-                <th>Дата</th>
-                <th>Сумма</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for transaction in transactions %}
-
-                <tr class="fs-5 transactions">
-                    {% if transaction.type == 1 %}
-                        <td>Пополнение счета</td>
-                        <td>{{ transaction.created.date|date('d.m.Y h:i') }} </td>
-                    {% else %}
-                        {% if transaction.expires != null %}
-                            <td>Аренда курса "{{ transaction.code }}"</td>
-                            <td>{{ transaction.created.date|date('d.m.Y h:i') }} по {{ transaction.expires.date|date('d.m.Y h:i') }}</td>
-                        {% else %}
-                            <td>Покупка курса "{{ transaction.code }}"</td>
-                            <td>{{ transaction.created.date|date('d.m.Y h:i') }}</td>
-                        {% endif %}
-                    {% endif %}
-                    <td>{{ transaction.amount }} ₽</td>
+            <table class="table">
+                <thead>
+                <tr class="fs-3">
+                    <th>Описание</th>
+                    <th>Дата</th>
+                    <th>Сумма</th>
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                {% for transaction in transactions %}
+
+                    <tr class="fs-5 transactions">
+                        {% if transaction.type == 1 %}
+                            <td>Пополнение счета</td>
+                            <td>{{ transaction.created.date|date('d.m.Y h:i') }} </td>
+                        {% else %}
+                            {% if transaction.expires != null %}
+                                <td>Аренда курса "{{ transaction.code }}"</td>
+                                <td>{{ transaction.created.date|date('d.m.Y h:i') }}
+                                    по {{ transaction.expires.date|date('d.m.Y h:i') }}</td>
+                            {% else %}
+                                <td>Покупка курса "{{ transaction.code }}"</td>
+                                <td>{{ transaction.created.date|date('d.m.Y h:i') }}</td>
+                            {% endif %}
+                        {% endif %}
+                        <td>{{ transaction.amount }} ₽</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
 
     </div>
 {% endblock %}

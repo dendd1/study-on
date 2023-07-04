@@ -237,7 +237,7 @@ class CourseController extends AbstractController
         $oldCode = $course->getCode();
         $billingCourse = $this->billingClient->getCourse($course->getCode());
         $oldType = $billingCourse['type'];
-        $form = $this->createForm(CourseType::class, $course);
+        $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

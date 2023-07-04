@@ -4,17 +4,31 @@ namespace App\Controller;
 
 use App\Entity\Lesson;
 use App\Form\LessonType;
+use App\Repository\CourseRepository;
 use App\Repository\LessonRepository;
+use App\Service\ArrayService;
+use App\Service\BillingClient;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Security;
 
 /**
  * @Route("/lesson")
  */
 class LessonController extends AbstractController
 {
+    private BillingClient $billingClient;
+
+    private Security $security;
+
+    public function __construct(BillingClient $billingClient, Security $security)
+    {
+        $this->billingClient = $billingClient;
+        $this->security = $security;
+    }
+
     /**
      * @Route("/", name="app_lesson_index", methods={"GET"})
      */
@@ -28,11 +42,22 @@ class LessonController extends AbstractController
     /**
      * @Route("/{id}", name="app_lesson_show", methods={"GET"})
      */
-    public function show(Lesson $lesson): Response
+    public function show(Lesson $lesson, CourseRepository $courseRepository): Response
     {
-        return $this->render('lesson/show.html.twig', [
-            'lesson' => $lesson,
-        ]);
+        $user = $this->security->getUser();
+//        echo('<pre>');
+//        print_r($user);
+//        echo('</pre>');
+        $billingCourse = $this->billingClient->getCourse($lesson->getCourse()->getCode());
+        $transactions = $this->billingClient
+            ->getTransactions($user->getApiToken(), 'payment', $lesson->getCourse()->getCode(), true);
+        if (count($transactions) > 0 or $billingCourse['type'] == 'free' || $this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $this->render('lesson/show.html.twig', [
+                'lesson' => $lesson,
+            ]);
+        } else {
+            return $this->redirectToRoute('app_course_show', ['id' => $lesson->getCourse()->getId()]);
+        }
     }
 
     /**
@@ -63,7 +88,7 @@ class LessonController extends AbstractController
     public function delete(Request $request, Lesson $lesson, LessonRepository $lessonRepository): Response
     {
         $id_course = $lesson->getCourse()->getId();
-        if ($this->isCsrfTokenValid('delete'.$lesson->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $lesson->getId(), $request->request->get('_token'))) {
             $lessonRepository->remove($lesson, true);
         }
 

@@ -10,13 +10,11 @@
 
         <table class="table">
             <thead>
-            <tr class="fs-3">
-                <th>Название</th>
-                <th>Описание</th>
-                {% if course.type is defined %}
+                <tr class="fs-3">
+                    <th>Название</th>
+                    <th>Описание</th>
                     <th>Стоимость</th>
-                {% endif %}
-            </tr>
+                </tr>
             </thead>
             <tbody>
             {% for course in courses %}
@@ -35,7 +33,7 @@
 
                         {% if course.type == 'free' %}
                             <td>
-                                <p class="text-danger"> Бесплатно</p>
+                                <p class="text-primary"> Бесплатно</p>
                             </td>
 
                         {% elseif course.type == 'buy' %}
@@ -45,7 +43,7 @@
                                 </td>
                             {% else %}
                                 <td>
-                                    <p> {{ course.price }} ₽</p>
+                                    <p class="text-danger"> {{ course.price }} ₽</p>
                                 </td>
                             {% endif %}
 
@@ -56,7 +54,7 @@
                                 </td>
                             {% else %}
                                 <td>
-                                    <p> {{ course.price }} ₽ в месяц</p>
+                                    <p class="text-danger"> {{ course.price }} ₽ в месяц</p>
                                 </td>
                             {% endif %}
                         {% endif %}
@@ -65,7 +63,11 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="5">no records found</td>
+                    <td colspan="5" align="center">
+                        <p class="fs-2 text-danger my-5">
+                            Похоже, что курсов тут пока нет...
+                        </p>
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>
