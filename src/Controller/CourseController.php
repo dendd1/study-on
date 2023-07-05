@@ -6,7 +6,10 @@ use App\DTO\CourseDTO;
 use App\Entity\Course;
 use App\Entity\Lesson;
 use App\Enum\PaymentStatus;
+use App\Exception\BillingException;
 use App\Exception\BillingUnavailableException;
+use App\Exception\CourseAlreadyExistException;
+use App\Exception\CourseValidationException;
 use App\Form\CourseType;
 use App\Form\LessonType;
 use App\Repository\CourseRepository;
@@ -21,6 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Intl\Exception\MissingResourceException;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
+use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use Symfony\Component\Security\Core\Security;
 
 /**
@@ -43,8 +47,15 @@ class CourseController extends AbstractController
     public function index(CourseRepository $courseRepository): Response
     {
         $courses = ArrayService::arrayByKey($courseRepository->findAllArray(), 'code');
+        try {
+            $billingCourses = ArrayService::arrayByKey($this->billingClient->getCourses(), 'code');
+        } catch (ResourceNotFoundException|BillingUnavailableException $e) {
+            $this->addFlash('notice', $e->getMessage());
+            return $this->render('course/index.html.twig', [
+                'courses' => [],
+            ]);
+        }
 
-        $billingCourses = ArrayService::arrayByKey($this->billingClient->getCourses(), 'code');
 
         foreach ($courses as $code => $course) {
             $courses[$code]['type'] = $billingCourses[$code]['type'];
@@ -56,9 +67,16 @@ class CourseController extends AbstractController
         if ($this->isGranted('ROLE_USER')) {
             $user = $this->security->getUser();
 
+            try {
+                $transactions = ArrayService::arrayByKey($this->billingClient
+                    ->getTransactions($user->getApiToken(), 'payment', null, true), 'code');
+            } catch (BillingException $e) {
+                $this->addFlash('notice', $e->getMessage());
+                return $this->render('course/index.html.twig', [
+                    'courses' => [],
+                ]);
+            }
 
-            $transactions = ArrayService::arrayByKey($this->billingClient
-                ->getTransactions($user->getApiToken(), 'payment', null, true), 'code');
             foreach ($courses as $code => $course) {
                 if (isset($transactions[$code])) {
                     if ($course['type'] === PaymentStatus::RENT_NAME) {
@@ -113,29 +131,27 @@ class CourseController extends AbstractController
             $type = $form->get('type')->getData();
             $price = $form->get('price')->getData();
             $code = $form->get('code')->getData();
-            if ($courseRepository->count(['code' => $code]) > 0) {
-                throw new LogicException('Курс с таким кодом уже существует');
-            }
-            if ($type == PaymentStatus::FREE) {
-                $price = 0;
-            } elseif ($price == 0) {
-                throw new ResourceNotFoundException('Курс платный, укажите цену');
-            }
+
             $user = $this->security->getUser();
             $courseDTO = CourseDTO::getCourseDTO($name, $code, $type, $price);
+            try {
+                $response = $this->billingClient->newCourse($user->getApiToken(), $courseDTO);
+            } catch (CustomUserMessageAuthenticationException|
+            CourseValidationException|CourseAlreadyExistException $e) {
+                $this->addFlash('notice', $e->getMessage());
+                return $this->renderForm('course/new.html.twig', [
+                    'course' => $course,
+                    'form' => $form,
 
-            $response = $this->billingClient->newCourse($user->getApiToken(), $courseDTO);
+                ]);
+            }
+
             if (isset($response['success'])) {
                 $courseRepository->add($course, true);
             }
 
             return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
         }
-//        if ($form->isSubmitted() && $form->isValid()) {
-//            $courseRepository->add($course, true);
-//
-//            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
-//        }
 
         return $this->renderForm('course/new.html.twig', [
             'course' => $course,
@@ -153,14 +169,23 @@ class CourseController extends AbstractController
         if (!$user) {
             return $this->redirectToRoute('app_login', [], Response::HTTP_SEE_OTHER);
         }
-        $billingCourse = $this->billingClient->getCourse($course->getCode());
-        $billingUser = $this->billingClient->getCurrentUser($user->getApiToken());
-        $transactions = $this->billingClient->getTransactions(
-            $user->getApiToken(),
-            'payment',
-            $course->getCode(),
-            true
-        );
+        try {
+            $billingCourse = $this->billingClient->getCourse($course->getCode());
+            $billingUser = $this->billingClient->getCurrentUser($user->getApiToken());
+            $transactions = $this->billingClient->getTransactions(
+                $user->getApiToken(),
+                'payment',
+                $course->getCode(),
+                true
+            );
+        } catch (ResourceNotFoundException|BillingUnavailableException|
+        CustomUserMessageAuthenticationException|BillingException $e) {
+            $this->addFlash('notice', $e->getMessage());
+            return $this->render('course/index.html.twig', [
+                'courses' => [],
+            ]);
+        }
+
         $course = [
             'id' => $course->getId(),
             'code' => $course->getCode(),
@@ -173,22 +198,8 @@ class CourseController extends AbstractController
         if (isset($billingCourse['price'])) {
             $course['price'] = $billingCourse['price'];
         }
-        if ($billingCourse['type'] === 'rent') {
-            $course['price_msg'] = $billingCourse['price'] . '₽ в неделю';
-        } elseif ($billingCourse['type'] === 'buy') {
-            $course['price_msg'] = $billingCourse['price'] . '₽';
-        } elseif ($billingCourse['type'] === 'free') {
-            $course['price_msg'] = 'Бесплатный';
-        }
         if (count($transactions) > 0) {
-            $transaction = $transactions[count($transactions) - 1];
             $course['isPaid'] = true;
-            if ($billingCourse['type'] === 'rent') {
-                $course['price_msg'] = 'Арендовано до ' .
-                    date('d/m/y H:i:s', strtotime($transaction['expires']['date']));
-            } elseif ($billingCourse['type'] === 'buy') {
-                $course['price_msg'] = 'Куплено';
-            }
         }
         $status = null;
         if ($request->query->get('status') != null) {
@@ -235,7 +246,15 @@ class CourseController extends AbstractController
     public function edit(Request $request, Course $course, CourseRepository $courseRepository): Response
     {
         $oldCode = $course->getCode();
-        $billingCourse = $this->billingClient->getCourse($course->getCode());
+        try {
+            $billingCourse = $this->billingClient->getCourse($course->getCode());
+        } catch (ResourceNotFoundException|BillingUnavailableException $e) {
+            $this->addFlash('notice', $e->getMessage());
+            return $this->render('course/index.html.twig', [
+                'courses' => [],
+            ]);
+        }
+
         $oldType = $billingCourse['type'];
         $form = $this->createForm(CourseType::class, $course, ['attr' => ['class' => 'row justify-content-center ']]);
         $form->handleRequest($request);
@@ -249,12 +268,23 @@ class CourseController extends AbstractController
             }
             $price = $form->get('price')->getData();
             $code = $form->get('code')->getData();
-            if ($oldCode != $code && $courseRepository->count(['code' => $code]) > 0) {
-                throw new LogicException('Курс с таким кодом уже существует');
-            }
+
             $user = $this->security->getUser();
             $courseDTO = CourseDTO::getCourseDTO($name, $code, $type, $price);
-            $response = $this->billingClient->editCourse($user->getApiToken(), $oldCode, $courseDTO);
+
+            try {
+                $response = $this->billingClient->editCourse($user->getApiToken(), $oldCode, $courseDTO);
+            } catch (CourseValidationException|CourseAlreadyExistException $e) {
+                $this->addFlash('notice', $e->getMessage());
+                return $this->renderForm('course/edit.html.twig', [
+                    'course' => $course,
+                    'form' => $form,
+                ]);
+            } catch (CustomUserMessageAuthenticationException $e) {
+                $this->addFlash('notice', $e->getMessage());
+                return $this->redirectToRoute('app_login');
+            }
+
             if (isset($response['success'])) {
                 $courseRepository->add($course, true);
             }

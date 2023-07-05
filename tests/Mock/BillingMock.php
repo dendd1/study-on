@@ -9,6 +9,7 @@ use App\Security\User;
 use App\Tests\AbstractTest;
 use App\Service\BillingClient;
 use DateInterval;
+use DateTime;
 use DateTimeImmutable;
 use JMS\Serializer\SerializerBuilder;
 use Symfony\Component\DomCrawler\Crawler;
@@ -65,32 +66,54 @@ class BillingMock extends BillingClient
             'code' => 'test_rent',
             'type' => 'rent',
             'price' => 20
+        ],
+        [
+            'code' => 'код-тест-1',
+            'type' => 'free'
         ]
     ];
 
     private static array $transactions = [
         [
-            "id" => 2,
-            "type" => "payment",
-            "code" => "cooking-1",
-            "amount" => 10
+            "id" => 1,
+            "code" => "cleanCourse-1",
+            "type" => "0",
+            "amount" => 30,
+            "created" => [
+                "date" => "2023-07-05 04:21:26.080125",
+                "timezone_type" => 3,
+                "timezone" => "UTC"
+            ],
+            "expires" => null
         ],
         [
-            "id" => 3,
-            "type" => "payment",
-            "code" => "cleanCourse-1",
-            "amount" => 20
-        ]
+            "id" => 2,
+            "code" => "cooking-1",
+            "type" => "0",
+            "amount" => 20,
+            "created" => [
+                "date" => "2023-07-05 04:21:26.080125",
+                "timezone_type" => 3,
+                "timezone" => "UTC"
+            ],
+            "expires" => [
+                "date" => "2023-07-05 04:21:26.080125",
+                "timezone_type" => 3,
+                "timezone" => "UTC"
+            ]
+        ],
+
     ];
 
 
     private static string $newToken;
 
-    public function __construct()
+    public function __construct(ValidatorInterface $validator)
     {
 
-        $created = (new DateTimeImmutable());
-        $expires = ((new DateTimeImmutable())->add(new DateInterval('P1W')));
+
+        $created = (new DateTime());
+        $expires = $created;
 
         self::$user['token'] = $this->generateToken(self::$user['roles'], self::$user['username']);
         self::$admin['token'] = $this->generateToken(self::$admin['roles'], self::$admin['username']);
@@ -98,10 +121,8 @@ class BillingMock extends BillingClient
         self::$new_user['refresh_token'] = $this->generateRefreshToken(self::$user['roles'], 'test@example.com');
         self::$user['refresh_token'] = $this->generateRefreshToken(self::$user['roles'], self::$user['username']);
         self::$admin['refresh_token'] = $this->generateRefreshToken(self::$admin['roles'], self::$admin['username']);
-        foreach (self::$transactions as &$transaction) {
-            $transaction['created']['date'] = $created;
-            $transaction['expires']['date'] = $expires;
-        }
+
+        parent::__construct($validator);
     }
 
     private function generateToken($roles, $username): string
@@ -221,7 +242,7 @@ class BillingMock extends BillingClient
         return ['success' => true];
     }
 
-    public function editCourse($token, $code, $course2)
+    public function editCourse($token, $code, $course)
     {
         foreach (self::$courses as $course) {
             if ($course['code'] == $code) {
@@ -251,15 +272,16 @@ class BillingMock extends BillingClient
         }
         return ['success' => true];
     }
-//    public function getTransactions($token, $type = Null, $code, $skip_expired): array
-//    {
-//        [$exp, $email, $roles] = User::jwtDecode($token);
-//        $result = [];
-//        foreach (self::$transactions as $transaction) {
-//            if ($transaction['code'] == $code) {
-//                $result[] = $transaction;
-//            }
-//        }
-//        return $result;
-//    }
+
+    public function getTransactions($token, $type = null, $code = null, $skip_expired = false): array
+    {
+        [$exp, $email, $roles] = User::jwtDecode($token);
+        $result = [];
+        foreach (self::$transactions as $transaction) {
+            if ($transaction['code'] == $code) {
+                $result[] = $transaction;
+            }
+        }
+        return $result;
+    }
 }

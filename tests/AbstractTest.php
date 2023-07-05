@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
+use App\Service\BillingClient;
 use App\Tests\Mock\BillingMock;
 use Doctrine\Common\DataFixtures\Executor\ORMExecutor;
 use Doctrine\Common\DataFixtures\Loader;
@@ -12,6 +13,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 abstract class AbstractTest extends WebTestCase
 {
@@ -24,8 +26,8 @@ abstract class AbstractTest extends WebTestCase
             static::$client = static::createClient($options, $server);
             static::$client->disableReboot();
             static::$client->getContainer()->set(
-                'App\Service\BillingClient',
-                new BillingMock()
+                BillingClient::class,
+                new BillingMock(self::getContainer()->get(ValidatorInterface::class)),
             );
         }
 

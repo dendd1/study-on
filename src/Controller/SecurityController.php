@@ -27,10 +27,6 @@ class SecurityController extends AbstractController
      */
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
-        // if ($this->getUser()) {
-        //     return $this->redirectToRoute('target_path');
-        // }
-
         // get the login error if there is one
         $error = $authenticationUtils->getLastAuthenticationError();
         // last username entered by the user
@@ -62,16 +58,10 @@ class SecurityController extends AbstractController
                     'username' => $form->get('email')->getData(),
                     'password' => $form->get('password')->getData()
                 ]);
-            } catch (\Exception $e) {
-                if ($e instanceof CustomUserMessageAuthenticationException) {
-                    $error = $e->getMessage();
-                } else {
-                    throw $e;
-                    $error = "Сервис временно недоступен.";
-                }
+            } catch (CustomUserMessageAuthenticationException $e) {
                 return $this->render('security/register.html.twig', [
                     'registrationForm' => $form->createView(),
-                    'error' => $error,
+                    'error' => $e->getMessage(),
                 ]);
             }
             $user

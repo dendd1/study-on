@@ -46,16 +46,17 @@ class BillingClient
             [],
             ['Authorization' => 'Bearer ' . $token]
         );
-        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
-            throw new CustomUserMessageAuthenticationException(
-                json_decode($response['body'], true)['errors'],
-                $response['code']
-            );
+        if ($response['code'] == Response::HTTP_OK) {
+            return json_decode($response['body'], true);
+        } else {
+            $json = json_decode($response['body'], true);
+            if (!empty($json['message']) && !empty($response['code'])) {
+                throw new BillingException(
+                    $json['message'],
+                    $response['code']
+                );
+            }
         }
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new BillingUnavailableException();
-        }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function getCourses()
@@ -64,10 +65,12 @@ class BillingClient
             'GET',
             self::GET_COURSES,
         );
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new BillingUnavailableException();
+
+        if ($response['code'] == Response::HTTP_OK) {
+            return json_decode($response['body'], true);
+        } else {
+            throw new BillingUnavailableException($response['message']);
         }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function auth($credentials)
@@ -79,13 +82,28 @@ class BillingClient
             $credentials,
         );
 
-        if ($response['code'] === 401) {
-            throw new CustomUserMessageAuthenticationException('Неправильные логин или пароль');
+        if ($response['code'] === 200) {
+            return json_decode($response['body'], true);
+        } else {
+            throw new CustomUserMessageAuthenticationException(json_decode($response['body'], true)['message']);
         }
-        if ($response['code'] >= 400) {
-            throw new BillingUnavailableException();
+    }
+
+    public function register($credentials)
+    {
+        $response = $this->jsonRequest(
+            'POST',
+            self::REGISTER_PATH,
+            [],
+            $credentials,
+        );
+        if ($response['code'] == Response::HTTP_CREATED) {
+            return json_decode($response['body'], true);
+        } else {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['message']
+            );
         }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function getCourse($code)
@@ -94,14 +112,14 @@ class BillingClient
             'GET',
             self::GET_COURSES . '/' . $code,
         );
-        if ($response['code'] === Response::HTTP_NOT_FOUND) {
-            throw new ResourceNotFoundException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new BillingUnavailableException();
-        }
 
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+        if ($response['code'] === 200) {
+            return json_decode($response['body'], true);
+        } elseif ($response['code'] === Response::HTTP_NOT_FOUND) {
+            throw new ResourceNotFoundException(json_decode($response['body'], true)['message'], $response['code']);
+        } else {
+            throw new BillingUnavailableException(json_decode($response['body'], true)['message'], $response['code']);
+        }
     }
 
     public function payForCourse($token, $code)
@@ -113,48 +131,26 @@ class BillingClient
             [],
             ['Authorization' => 'Bearer ' . $token]
         );
-        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
-            throw new CustomUserMessageAuthenticationException(
-                json_decode($response['body'], true)['errors'],
-                $response['code']
-            );
-        }
-        if ($response['code'] === Response::HTTP_NOT_FOUND) {
-            throw new ResourceNotFoundException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] === Response::HTTP_NOT_ACCEPTABLE) {
-            throw new MissingResourceException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] === Response::HTTP_CONFLICT) {
-            throw new \LogicException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new BillingUnavailableException();
-        }
-
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
-    }
-
-    public function register($credentials)
-    {
-        $response = $this->jsonRequest(
-            'POST',
-            self::REGISTER_PATH,
-            [],
-            $credentials,
-        );
-
-        if (isset($response['code'])) {
-            if (409 === $response['code']) {
-                throw new CustomUserMessageAuthenticationException($response['message']);
-            }
-            if (400 === $response['code']) {
+        if ($response['code'] == Response::HTTP_OK) {
+            return json_decode($response['body'], true);
+        } elseif ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            $json = json_decode($response['body'], true);
+            if (!empty($json['message']) && !empty($response['code'])) {
                 throw new CustomUserMessageAuthenticationException(
-                    json_decode($response['body'], true, 512)['errors'][0]
+                    json_decode($response['body'], true)['message'],
+                    $json['message'],
+                    $response['code']
                 );
             }
+        } elseif ($response['code'] === Response::HTTP_NOT_FOUND) {
+            throw new ResourceNotFoundException(json_decode($response['body'], true)['message'], $response['code']);
+        } elseif ($response['code'] === Response::HTTP_NOT_ACCEPTABLE) {
+            throw new MissingResourceException(json_decode($response['body'], true)['message'], $response['code']);
+        } elseif ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new \LogicException(json_decode($response['body'], true)['message'], $response['code']);
+        } else {
+            throw new BillingUnavailableException();
         }
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function getCurrentUser(string $token)
@@ -166,19 +162,18 @@ class BillingClient
             [],
             ['Authorization' => 'Bearer ' . $token]
         );
-        if ($response['code'] === 401) {
-            throw new CustomUserMessageAuthenticationException('Некорректный JWT токен');
-        }
-        if ($response['code'] >= 400) {
+        if ($response['code'] == Response::HTTP_OK) {
+            $userDto = $this->serializer->deserialize($response['body'], UserDTO::class, 'json');
+            $errors = $this->validator->validate($userDto);
+            if (count($errors) > 0) {
+                throw new BillingUnavailableException('User data is not valid');
+            }
+            return $userDto;
+        } elseif ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException($response['code']);
+        } else {
             throw new BillingUnavailableException();
         }
-
-        $userDto = $this->serializer->deserialize($response['body'], UserDTO::class, 'json');
-        $errors = $this->validator->validate($userDto);
-        if (count($errors) > 0) {
-            throw new BillingUnavailableException('User data is not valid');
-        }
-        return $userDto;
     }
 
     public function refreshToken(string $refreshToken): array
@@ -188,24 +183,16 @@ class BillingClient
             self::REFRESH_TOKEN,
             [],
             ['refresh_token' => $refreshToken],
-            [],
         );
-        if (isset($response['code'])) {
-            if (401 === $response['code']) {
-                echo('<pre>');
-                print_r($response);
-                echo('</pre>');
-                echo($refreshToken);
-                throw new CustomUserMessageAuthenticationException($response['message']);
-            }
-            if (400 === $response['code']) {
-                throw new CustomUserMessageAuthenticationException(
-                    json_decode($response['body'], true, 512)['errors'][0]
-                );
-            }
+        if ($response['code'] == Response::HTTP_OK) {
+            return json_decode($response['body'], true);
+        } elseif ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            throw new CustomUserMessageAuthenticationException(json_decode($response['body'], true)['message']);
+        } else {
+            throw new CustomUserMessageAuthenticationException(
+                json_decode($response['body'], true)['message']
+            );
         }
-
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function editCourse($token, $code, $course)
@@ -217,23 +204,23 @@ class BillingClient
             $course,
             ['Authorization' => 'Bearer ' . $token]
         );
-        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
-            throw new CustomUserMessageAuthenticationException(
-                json_decode($response['body'], true)['errors'],
-                $response['code']
-            );
+        if ($response['code'] == Response::HTTP_OK) {
+            return json_decode($response['body'], true);
+        } elseif ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+            $json = json_decode($response['body'], true);
+            if (!empty($json['message']) && !empty($response['code'])) {
+                throw new CustomUserMessageAuthenticationException(
+                    $json['message'],
+                    $response['code']
+                );
+            }
+        } elseif ($response['code'] === Response::HTTP_FORBIDDEN) {
+            throw new CourseValidationException(json_decode($response['body'], true)['message'], $response['code']);
+        } elseif ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new CourseAlreadyExistException(json_decode($response['body'], true)['message'], $response['code']);
+        } else {
+            throw new CourseValidationException(json_decode($response['body'], true)['message'], $response['code']);
         }
-        if ($response['code'] === Response::HTTP_FORBIDDEN) {
-            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] === Response::HTTP_CONFLICT) {
-            throw new CourseAlreadyExistException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function newCourse($token, $course)
@@ -245,23 +232,20 @@ class BillingClient
             $course,
             ['Authorization' => 'Bearer ' . $token]
         );
-        if ($response['code'] === Response::HTTP_UNAUTHORIZED) {
+        if ($response['code'] == Response::HTTP_CREATED) {
+            return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+        } elseif ($response['code'] === Response::HTTP_UNAUTHORIZED) {
             throw new CustomUserMessageAuthenticationException(
-                json_decode($response['body'], true)['errors'],
+                json_decode($response['body'], true)['message'],
                 $response['code']
             );
+        } elseif ($response['code'] === Response::HTTP_FORBIDDEN) {
+            throw new CourseValidationException(json_decode($response['body'], true)['message'], $response['code']);
+        } elseif ($response['code'] === Response::HTTP_CONFLICT) {
+            throw new CourseAlreadyExistException(json_decode($response['body'], true)['message'], $response['code']);
+        } else {
+            throw new CourseValidationException(json_decode($response['body'], true)['message'], $response['code']);
         }
-        if ($response['code'] === Response::HTTP_FORBIDDEN) {
-            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] === Response::HTTP_CONFLICT) {
-            throw new CourseAlreadyExistException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-        if ($response['code'] >= Response::HTTP_BAD_REQUEST) {
-            throw new CourseValidationException(json_decode($response['body'], true)['errors'], $response['code']);
-        }
-
-        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
     }
 
     public function jsonRequest($method, string $path, $params = [], $body = [], $headers = [])
@@ -277,7 +261,8 @@ class BillingClient
         $params = [],
         $body = [],
         $headers = []
-    ) {
+    )
+    {
         $options = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,

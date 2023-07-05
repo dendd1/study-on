@@ -3,6 +3,8 @@
 namespace App\Controller;
 
 use App\Entity\Lesson;
+use App\Exception\BillingException;
+use App\Exception\BillingUnavailableException;
 use App\Form\LessonType;
 use App\Repository\CourseRepository;
 use App\Repository\LessonRepository;
@@ -45,12 +47,15 @@ class LessonController extends AbstractController
     public function show(Lesson $lesson, CourseRepository $courseRepository): Response
     {
         $user = $this->security->getUser();
-//        echo('<pre>');
-//        print_r($user);
-//        echo('</pre>');
-        $billingCourse = $this->billingClient->getCourse($lesson->getCourse()->getCode());
-        $transactions = $this->billingClient
-            ->getTransactions($user->getApiToken(), 'payment', $lesson->getCourse()->getCode(), true);
+        try {
+            $billingCourse = $this->billingClient->getCourse($lesson->getCourse()->getCode());
+            $transactions = $this->billingClient
+                ->getTransactions($user->getApiToken(), 'payment', $lesson->getCourse()->getCode(), true);
+        } catch (BillingException $e) {
+            $this->addFlash('notice', $e->getMessage());
+            return $this->redirectToRoute('app_course_index');
+        }
+
         if (count($transactions) > 0 or $billingCourse['type'] == 'free' || $this->isGranted('ROLE_SUPER_ADMIN')) {
             return $this->render('lesson/show.html.twig', [
                 'lesson' => $lesson,

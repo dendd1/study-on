@@ -2,12 +2,12 @@
     <div class="container">
         <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start ">
 
-            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0 fw-bold fs-5">
-                <li><a href="{{ path('app_course_index') }}" class="nav-link px-2 text-white">Список курсов</a></li>
+            <div class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0 fw-bold fs-5">
+                <a href="{{ path('app_course_index') }}" class="nav-link px-2 text-white">Список курсов</a>
                 {% if is_granted('ROLE_USER') %}
-                    <li><a href="{{ path('app_profile') }}" class="nav-link px-2 text-white">Профиль пользователя</a></li>
+                    <a href="{{ path('app_profile') }}" class="nav-link px-2 text-white">Профиль пользователя</a>
                 {% endif %}
-            </ul>
+            </div>
 
 
             {% if is_granted('ROLE_USER') %}

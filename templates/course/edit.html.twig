@@ -8,6 +8,12 @@
         <h1 class="text-center mb-5">Редактирование курса</h1>
         {{ include('course/_form.html.twig', {'button_label': 'Update'}) }}
 
+        {% for message in app.flashes('notice') %}
+            <div class="flash-notice w-100 text-center py-5">
+                <p class="text-danger fs-5">{{ message }}</p>
+            </div>
+        {% endfor %}
+
         <div class="d-flex justify-content-center ">
             <a class="btn btn-outline-primary fs-5 mt-3 me-3" style="width: 200px" href="{{ path('app_course_index') }}">К списку
                 курсов</a>
